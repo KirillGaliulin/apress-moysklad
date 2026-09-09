@@ -5,6 +5,7 @@ require 'openssl'
 require 'uri'
 
 require 'oj'
+require 'logger'
 
 module Apress
   module Moysklad
@@ -49,7 +50,12 @@ module Apress
             http.request(req)
           end
 
+          logger.info "(#{login}) Request url: #{uri}. Response code - message: #{res.code} - #{res.msg}"
+
           parse_response(res)
+        rescue StandardError => e
+          logger.info "(#{login}) Request failed. Info: #{e.class} - #{e.message}"
+          raise
         end
 
         def category_param_for_filter(category)
@@ -75,6 +81,7 @@ module Apress
           is_success = res.is_a? Net::HTTPOK
 
           if !is_success && !headers['content-type'].to_s.include?('json')
+            logger.info "(#{login}) Not code 200 and not json: #{res.msg}, #{res.code}, #{headers.inspect}"
             raise Api::Error.new(res.msg, res.code, headers)
           end
 
@@ -85,11 +92,21 @@ module Apress
               raise Api::Error.new(err[:error], err[:code])
             end
 
-            raise Api::Error.new(res.msg, res.code, headers) unless is_success
+            unless is_success
+              logger.info "(#{login}) Not code 200: #{res.msg}, #{res.code}, #{headers.inspect}"
+              raise Api::Error.new(res.msg, res.code, headers)
+            end
           end
           Api::RequestLimit.new(headers).call
 
+          logger.info "(#{login}) Response headers: #{headers.inspect}"
+          logger.info "(#{login}) Response body: #{response.inspect}"
           response
+        end
+
+        def logger
+          @logger ||=
+            ::Logger.new(File.join(Dir.pwd, 'log/moysklad_debug.log')).tap { |l| l.formatter = ::Logger::Formatter.new }
         end
       end
     end

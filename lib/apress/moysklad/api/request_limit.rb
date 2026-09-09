@@ -1,3 +1,5 @@
+require 'logger'
+
 module Apress
   module Moysklad
     module Api
@@ -13,6 +15,8 @@ module Apress
         def call
           return if rate_limit.nil? || rate_limit >= REQUEST_COST
 
+          logger.info "Rate limit: #{rate_limit} < #{REQUEST_COST}"
+          logger.info "Sleeping #{reset_time} secs"
           sleep(reset_time)
         end
 
@@ -24,6 +28,10 @@ module Apress
 
         def rate_limit
           headers['x-ratelimit-remaining']&.to_i
+        end
+
+        def logger
+          @logger ||= ::Logger.new(File.join(Dir.pwd, 'log/moysklad_debug.log'))
         end
       end
     end
