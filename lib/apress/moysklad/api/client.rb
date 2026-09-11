@@ -87,7 +87,7 @@ module Apress
 
             raise Api::Error.new(res.msg, res.code, headers) unless is_success
           end
-          Api::RequestLimit.new(headers).call
+          Api::RequestLimit.new(headers, login).call
 
           response
         end
